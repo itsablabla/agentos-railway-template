@@ -39,15 +39,25 @@ Confirm AgentOS is running at [http://localhost:8000/docs](http://localhost:8000
 
 Requires:
 - [Railway CLI](https://docs.railway.com/guides/cli)
-- `OPENAI_API_KEY` set in your environment
+- `OPENAI_API_KEY` set in your environment (required for fresh deploy)
 
 ```sh
 railway login
 
+# Fresh deploy: creates a new Railway project and provisions pgvector + app service
 ./scripts/railway_up.sh
+
+# Existing deploy: links to an existing project and deploys the app service only
+./scripts/railway_up.sh --project <project-id-or-name> --environment production
+
+# Existing deploy with a non-default service name (for example, agent_os)
+./scripts/railway_up.sh --project <project-id-or-name> --environment production --service agent_os
 ```
 
-The script provisions PostgreSQL, configures environment variables, and deploys your application.
+Use a project ID when possible for reliable targeting.
+
+Without `--project`, the script provisions PostgreSQL, configures environment variables, and deploys your application.
+With `--project`, it skips provisioning and only runs `railway link` + `railway up --service <service> -d`.
 
 ### Connect to the Web UI
 
