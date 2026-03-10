@@ -47,17 +47,21 @@ railway login
 # Fresh deploy: creates a new Railway project and provisions pgvector + app service
 ./scripts/railway_up.sh
 
-# Existing deploy: links to an existing project and deploys the app service only
+# Update: re-deploy to the currently linked project (after code changes)
+./scripts/railway_up.sh -U
+
+# Deploy to a specific existing project (links first, then deploys)
 ./scripts/railway_up.sh --project <project-id-or-name> --environment production
 
-# Existing deploy with a non-default service name (for example, agent_os)
-./scripts/railway_up.sh --project <project-id-or-name> --environment production --service agent_os
+# Deploy with a custom service name
+./scripts/railway_up.sh --project <project-id-or-name> --service agent_os
 ```
 
 Use a project ID when possible for reliable targeting.
 
-Without `--project`, the script provisions PostgreSQL, configures environment variables, and deploys your application.
-With `--project`, it skips provisioning and only runs `railway link` + `railway up --service <service> -d`.
+Without flags, the script provisions PostgreSQL, configures environment variables, and deploys your application.
+With `-U`, it re-deploys to the already linked project (no provisioning).
+With `--project`, it links to a specific project first, then deploys.
 
 ### Connect to the Web UI
 
@@ -67,15 +71,17 @@ With `--project`, it skips provisioning and only runs `railway link` + `railway 
 
 ### Manage deployment
 
+Replace `<service>` with your service name (`agent-os` by default, or the value passed to `--service`).
+
 ```sh
-railway logs --service agent-os      # View logs
-railway open                         # Open dashboard
-railway up --service agent-os -d     # Update after changes
+railway logs --service <service>      # View logs
+railway open                          # Open dashboard
+railway up --service <service> -d     # Update after changes
 ```
 
 To stop services:
 ```sh
-railway down --service agent-os
+railway down --service <service>
 railway down --service pgvector
 ```
 

@@ -24,12 +24,14 @@ NC='\033[0m'
 PROJECT=""
 ENVIRONMENT="production"
 APP_SERVICE="agent-os"
+UPDATE=false
 
 usage() {
     cat <<EOF
 Usage: ./scripts/railway_up.sh [OPTIONS]
 
 Options:
+  -U, --update                  Update the currently linked project (re-deploy only)
   -p, --project PROJECT         Deploy to an existing Railway project (ID recommended)
   -e, --environment ENVIRONMENT Railway environment for project linking (default: production)
   -s, --service SERVICE         Railway service name to deploy (default: agent-os)
@@ -65,6 +67,10 @@ fi
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
+        -U|--update)
+            UPDATE=true
+            shift
+            ;;
         -p|--project)
             if [[ -z "$2" || "$2" == -* ]]; then
                 echo "Missing value for $1."
@@ -103,6 +109,19 @@ while [[ $# -gt 0 ]]; do
             ;;
     esac
 done
+
+if [[ "$UPDATE" == true ]]; then
+    echo ""
+    echo -e "${BOLD}Updating currently linked project...${NC}"
+    echo ""
+    railway up --service "$APP_SERVICE" -d
+
+    echo ""
+    echo -e "${BOLD}Done.${NC} Update deployed."
+    echo -e "${DIM}Logs: railway logs --service ${APP_SERVICE}${NC}"
+    echo ""
+    exit 0
+fi
 
 if [[ -n "$PROJECT" ]]; then
     echo ""
