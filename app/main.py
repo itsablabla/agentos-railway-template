@@ -34,6 +34,7 @@ from agents.knowledge_agent import knowledge_agent
 from agents.mcp_agent import mcp_agent
 from agents.dash import dash
 from agents.gcode import gcode
+from agents.os_control import os_control
 from agents.pal import pal
 from agents.scout import scout
 from agents.seek import seek
@@ -74,7 +75,7 @@ agent_os = AgentOS(
     tracing=True,
     scheduler=True,
     db=get_postgres_db(),
-    agents=[knowledge_agent, mcp_agent, dash, gcode, pal, scout, seek],
+    agents=[knowledge_agent, mcp_agent, dash, gcode, os_control, pal, scout, seek],
     teams=[research_team],
     workflows=[daily_brief_workflow],
     registry=registry,
