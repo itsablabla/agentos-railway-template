@@ -1,30 +1,44 @@
 """
 AgentOS — Garza OS
 ------------------
-Full Agno demo suite: 7 agents, 1 team, 1 workflow.
+Complete Agno agent suite with all available tools, skills, and interfaces.
 
-Agents:
-  - knowledge-agent  : RAG agent for answering questions from a knowledge base
-  - mcp-agent        : MCP-powered agent with external tool access
+Agents (16):
+  Original:
+  - knowledge-agent  : RAG agent with vector search
+  - mcp-agent        : MCP-powered agent (Agno docs + custom MCPs)
   - dash             : Self-learning data/SQL agent (F1 dataset)
-  - gcode            : Lightweight coding agent
-  - os-control       : System admin agent — manages all of AgentOS + Telegram bots
-  - pal              : Personal agent that learns your preferences
+  - gcode            : Fast code generation
+  - os-control       : System admin — manages all of AgentOS + Telegram bots
+  - pal              : Personal assistant with agentic memory
   - scout            : Enterprise knowledge navigator
-  - seek             : Deep research agent
+  - seek             : Deep research with Parallel API
 
-Teams:
-  - research-team    : Seek + Scout working together on deep research
+  New — Full Tool Coverage:
+  - web-agent        : DuckDuckGo, Wikipedia, arXiv, HackerNews, PubMed, YouTube, YFinance + more
+  - analyst          : DuckDB, CSV, Pandas, YFinance, Visualization, Python execution
+  - coder            : Python, Shell, File, DuckDB + optional GitHub, E2B
+  - media-agent      : DALL-E, YouTube, Giphy + optional ElevenLabs, Fal, Replicate
+  - productivity     : GitHub, Notion, Todoist, Linear, Jira, Google Calendar/Sheets + more
+  - comms            : Telegram, Slack, Gmail, Twilio, Discord, X, Reddit, Zoom, WhatsApp
+  - finance          : YFinance (full), OpenBB, Financial Datasets
+  - utility          : Weather, Google Maps, Calculator, BrandFetch + more
+  - reasoner         : ReasoningTools + research (uses o4-mini)
+  - skills-agent     : Agno Skills system with LocalSkills from /skills directory
 
-Workflows:
-  - daily-brief      : Scheduled morning briefing workflow
+Teams (4):
+  - research-team    : Seek + Scout (deep research)
+  - intelligence-team: Web Agent + Analyst + Reasoner (comprehensive intelligence)
+  - dev-team         : Coder + Web Agent + Gcode (software development)
+
+Workflows (1):
+  - daily-brief      : Scheduled morning briefing
 
 Interfaces:
-  - Telegram         : Multi-bot — any agent/team/workflow gets its own bot
-                       Configure via TELEGRAM_BOTS env var or OS Control agent chat
-  - Slack            : Activate via SLACK_BOT_TOKEN + SLACK_SIGNING_SECRET env vars
-  - AG-UI            : Activate via AGUI_ENABLED=true env var
-  - A2A              : Activate via A2A_ENABLED=true env var
+  - Telegram         : Multi-bot (TELEGRAM_BOTS env var or POST /telegram/bots)
+  - Slack            : SLACK_BOT_TOKEN + SLACK_SIGNING_SECRET
+  - AG-UI            : AGUI_ENABLED=true
+  - A2A              : A2A_ENABLED=true
 
 Run:
     python -m app.main
@@ -38,7 +52,12 @@ from agno.registry import Registry
 from agno.models.openai import OpenAIResponses
 from agno.tools.mcp import MCPTools
 from agno.tools.parallel import ParallelTools
+from agno.tools.duckduckgo import DuckDuckGoTools
+from agno.tools.yfinance import YFinanceTools
 
+# ---------------------------------------------------------------------------
+# Original agents
+# ---------------------------------------------------------------------------
 from agents.knowledge_agent import knowledge_agent
 from agents.mcp_agent import mcp_agent
 from agents.dash import dash
@@ -47,8 +66,36 @@ from agents.os_control import os_control
 from agents.pal import pal
 from agents.scout import scout
 from agents.seek import seek
+
+# ---------------------------------------------------------------------------
+# New agents — full tool coverage
+# ---------------------------------------------------------------------------
+from agents.web_agent import web_agent
+from agents.analyst import analyst
+from agents.coder import coder
+from agents.media_agent import media_agent
+from agents.productivity import productivity
+from agents.comms import comms
+from agents.finance import finance
+from agents.utility import utility
+from agents.reasoner import reasoner
+from agents.skills_agent import skills_agent
+
+# ---------------------------------------------------------------------------
+# Teams
+# ---------------------------------------------------------------------------
 from teams.research import research_team
+from teams.intelligence import intelligence_team
+from teams.dev import dev_team
+
+# ---------------------------------------------------------------------------
+# Workflows
+# ---------------------------------------------------------------------------
 from workflows.daily_brief import daily_brief_workflow
+
+# ---------------------------------------------------------------------------
+# Infrastructure
+# ---------------------------------------------------------------------------
 from db import get_postgres_db
 from interfaces.telegram import create_telegram_router
 
@@ -59,7 +106,7 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 registry = Registry(
     name="Garza OS Registry",
-    description="Registry of all tools, models, and databases available in AgentOS",
+    description="Registry of all tools, models, and databases available in Garza OS AgentOS",
     models=[
         OpenAIResponses(id="gpt-4o"),
         OpenAIResponses(id="gpt-4o-mini"),
@@ -71,11 +118,39 @@ registry = Registry(
     tools=[
         MCPTools(url="https://docs.agno.com/mcp"),
         ParallelTools(),
+        DuckDuckGoTools(),
+        YFinanceTools(),
     ],
     dbs=[
         get_postgres_db(),
     ],
 )
+
+# ---------------------------------------------------------------------------
+# All agents — ordered by category
+# ---------------------------------------------------------------------------
+_all_agents = [
+    # Original core agents
+    knowledge_agent,
+    mcp_agent,
+    dash,
+    gcode,
+    os_control,
+    pal,
+    scout,
+    seek,
+    # New full-coverage agents
+    web_agent,
+    analyst,
+    coder,
+    media_agent,
+    productivity,
+    comms,
+    finance,
+    utility,
+    reasoner,
+    skills_agent,
+]
 
 # ---------------------------------------------------------------------------
 # Create AgentOS
@@ -85,8 +160,8 @@ agent_os = AgentOS(
     tracing=True,
     scheduler=True,
     db=get_postgres_db(),
-    agents=[knowledge_agent, mcp_agent, dash, gcode, os_control, pal, scout, seek],
-    teams=[research_team],
+    agents=_all_agents,
+    teams=[research_team, intelligence_team, dev_team],
     workflows=[daily_brief_workflow],
     registry=registry,
     config=str(Path(__file__).parent / "config.yaml"),
@@ -98,8 +173,10 @@ app = agent_os.get_app()
 # Telegram multi-bot interface
 # Bots are registered via:
 #   1. TELEGRAM_BOTS env var: "token1:agent:pal,token2:team:research-team"
+#      Simple format: "token1:pal,token2:research-team" (defaults to agent)
 #   2. OS Control agent chat: "connect Telegram bot <token> to <agent>"
 #   3. POST /telegram/bots API directly
+#   4. GET /telegram/bots to list all registered bots
 # ---------------------------------------------------------------------------
 _public_domain = getenv("RAILWAY_PUBLIC_DOMAIN", getenv("PUBLIC_URL", ""))
 if _public_domain and not _public_domain.startswith("http"):
