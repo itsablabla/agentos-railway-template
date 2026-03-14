@@ -429,6 +429,43 @@ def get_config() -> str:
 
 
 # ---------------------------------------------------------------------------
+# Telegram Management Tools (calls the /telegram API on this AgentOS instance)
+# ---------------------------------------------------------------------------
+
+def list_telegram_bots() -> str:
+    """List all registered Telegram bots and which agent/team/workflow they are connected to."""
+    return _call("get", "/telegram/bots")
+
+
+def register_telegram_bot(token: str, target_type: str, target_id: str, name: str = "") -> str:
+    """Register a new Telegram bot and connect it to an agent, team, or workflow.
+    The bot's webhook will be automatically set up.
+    Args:
+        token: The Telegram bot token from @BotFather
+        target_type: One of 'agent', 'team', 'workflow'
+        target_id: The ID of the agent/team/workflow (e.g. 'pal', 'research-team', 'daily-brief')
+        name: Optional friendly name for the bot
+    """
+    body: dict = {"token": token, "target_type": target_type, "target_id": target_id}
+    if name:
+        body["name"] = name
+    return _call("post", "/telegram/bots", json=body)
+
+
+def remove_telegram_bot(token_preview: str) -> str:
+    """Remove a Telegram bot registration and delete its webhook.
+    Args:
+        token_preview: The first 10 characters of the bot token (as shown in list_telegram_bots)
+    """
+    return _call("delete", f"/telegram/bots/{token_preview}")
+
+
+def refresh_telegram_webhooks() -> str:
+    """Re-register all Telegram bot webhooks. Use this after the AgentOS URL changes."""
+    return _call("post", "/telegram/bots/refresh-webhooks")
+
+
+# ---------------------------------------------------------------------------
 # Instructions
 # ---------------------------------------------------------------------------
 instructions = """\
@@ -476,6 +513,14 @@ through natural language commands.
 - "Show metrics" → `get_metrics()`
 - "What agents are available?" → `list_agents()`
 - "What's in the registry?" → `get_registry()`
+
+**Telegram bot management:**
+- "List my Telegram bots" → `list_telegram_bots()`
+- "Connect a Telegram bot to Pal" → `register_telegram_bot(token, 'agent', 'pal')`
+- "Connect a bot to the research team" → `register_telegram_bot(token, 'team', 'research-team')`
+- "Connect a bot to daily brief" → `register_telegram_bot(token, 'workflow', 'daily-brief')`
+- "Remove bot X" → `remove_telegram_bot(token_preview)`
+- "Refresh all webhooks" → `refresh_telegram_webhooks()`
 
 ## Guidelines
 
@@ -548,6 +593,11 @@ os_control = Agent(
         get_health,
         get_registry,
         get_config,
+        # Telegram
+        list_telegram_bots,
+        register_telegram_bot,
+        remove_telegram_bot,
+        refresh_telegram_webhooks,
     ],
     enable_agentic_memory=True,
     add_datetime_to_context=True,
@@ -556,6 +606,7 @@ os_control = Agent(
     num_history_runs=10,
     markdown=True,
 )
+
 
 if __name__ == "__main__":
     os_control.print_response("List all agents in AgentOS", stream=True)
