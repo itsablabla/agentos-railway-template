@@ -3,7 +3,7 @@
 agno==2.5.5
 
 # FastAPI / server
-fastapi==0.134.0
+fastapi==0.115.0
 fastapi-cli==0.0.24
 fastapi-cloud-cli==0.14.0
 uvicorn==0.41.0
@@ -102,3 +102,4 @@ PyGithub>=2.5.0
 notion-client>=2.3.0
 todoist-api-python>=2.1.7
 resend>=2.0.0
+
