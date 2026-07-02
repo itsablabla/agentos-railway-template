@@ -42,6 +42,7 @@ Interfaces:
 
 Run:
     python -m app.main
+
 """
 import logging
 from os import getenv
@@ -49,7 +50,7 @@ from pathlib import Path
 
 from agno.os import AgentOS
 from agno.registry import Registry
-from agno.models.openai import OpenAIResponses
+from agno.models.openai import OpenAI, OpenAIResponses
 from agno.tools.mcp import MCPTools
 from agno.tools.parallel import ParallelTools
 from agno.tools.duckduckgo import DuckDuckGoTools
@@ -101,20 +102,59 @@ from interfaces.telegram import create_telegram_router
 
 logger = logging.getLogger(__name__)
 
+
+def _get_custom_llm_models() -> list:
+    """Get custom LLM models from environment variables."""
+    models = []
+    
+    custom_api_key = getenv("CUSTOM_LLM_API_KEY")
+    custom_base_url = getenv("CUSTOM_LLM_BASE_URL")
+    
+    if custom_api_key and custom_base_url:
+        model_categories = {
+            "claude": getenv("LLM_MODELS_CLAUDE", ""),
+            "gpt": getenv("LLM_MODELS_GPT", ""),
+            "gemini": getenv("LLM_MODELS_GEMINI", ""),
+            "deepseek": getenv("LLM_MODELS_DEEPSEEK", ""),
+            "grok": getenv("LLM_MODELS_GROK", ""),
+            "chinese": getenv("LLM_MODELS_CHINESE", ""),
+            "auto": getenv("LLM_MODELS_AUTO", ""),
+            "agent": getenv("LLM_MODELS_AGENT", ""),
+        }
+        
+        for category, model_list in model_categories.items():
+            if model_list:
+                for model_id in model_list.split(","):
+                    model_id = model_id.strip()
+                    if model_id:
+                        models.append(
+                            OpenAI(
+                                id=model_id,
+                                api_key=custom_api_key,
+                                base_url=custom_base_url,
+                            )
+                        )
+    
+    return models
+
+
 # ---------------------------------------------------------------------------
 # Build Registry — exposes tools, models, and dbs in the Studio Registry UI
 # ---------------------------------------------------------------------------
+_custom_models = _get_custom_llm_models()
+_default_models = [
+    OpenAIResponses(id="gpt-4o"),
+    OpenAIResponses(id="gpt-4o-mini"),
+    OpenAIResponses(id="gpt-4.1"),
+    OpenAIResponses(id="gpt-4.1-mini"),
+    OpenAIResponses(id="o3"),
+    OpenAIResponses(id="o4-mini"),
+]
+
 registry = Registry(
     name="Garza OS Registry",
     description="Registry of all tools, models, and databases available in Garza OS AgentOS",
-    models=[
-        OpenAIResponses(id="gpt-4o"),
-        OpenAIResponses(id="gpt-4o-mini"),
-        OpenAIResponses(id="gpt-4.1"),
-        OpenAIResponses(id="gpt-4.1-mini"),
-        OpenAIResponses(id="o3"),
-        OpenAIResponses(id="o4-mini"),
-    ],
+    models=_custom_models + _default_models if _custom_models else _default_models,
     tools=[
         MCPTools(url="https://docs.agno.com/mcp"),
         ParallelTools(),
@@ -235,3 +275,4 @@ if __name__ == "__main__":
         app="main:app",
         reload=getenv("RUNTIME_ENV", "prd") == "dev",
     )
+
